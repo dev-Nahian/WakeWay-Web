@@ -164,9 +164,11 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="flex items-center gap-3 pt-2 lg:pt-0">
-                  <Button size="lg" className="w-full lg:w-auto rounded-full px-8 py-6 text-base font-semibold shadow-md">
-                    View Journey
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                  <Button size="lg" asChild className="w-full lg:w-auto rounded-full px-8 py-6 text-base font-semibold shadow-md">
+                    <Link href="/trip/active_123">
+                      View Journey
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
                   </Button>
                 </div>
               </div>

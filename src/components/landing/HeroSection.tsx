@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronRight, ShieldAlert, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,9 +44,11 @@ export function HeroSection() {
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto pt-2">
-              <Button size="lg" className="w-full sm:w-auto rounded-full px-8 text-base shadow-lg hover:shadow-xl transition-all">
-                Plan a Trip
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button size="lg" asChild className="w-full sm:w-auto rounded-full px-8 text-base shadow-lg hover:shadow-xl transition-all">
+                <Link href="/plan-trip">
+                  Plan a Trip
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
               <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full px-8 text-base" asChild>
                 <a href="#how-it-works">How It Works</a>

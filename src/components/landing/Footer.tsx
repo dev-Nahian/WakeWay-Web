@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Navigation2 } from 'lucide-react';
 
 export function Footer() {
@@ -23,9 +24,9 @@ export function Footer() {
             <div className="font-semibold text-foreground text-xs uppercase tracking-wider">Product</div>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/plan-trip" className="hover:text-foreground transition-colors">
                   Plan a Trip
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#how-it-works" className="hover:text-foreground transition-colors">
@@ -50,14 +51,14 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/settings" className="hover:text-foreground transition-colors">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/settings" className="hover:text-foreground transition-colors">
                   Terms of Service
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -67,14 +68,14 @@ export function Footer() {
             <div className="font-semibold text-foreground text-xs uppercase tracking-wider">Support</div>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Contact Us
-                </a>
+                <Link href="/dashboard" className="hover:text-foreground transition-colors">
+                  Dashboard
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Documentation
-                </a>
+                <Link href="/history" className="hover:text-foreground transition-colors">
+                  Trip History
+                </Link>
               </li>
             </ul>
           </div>

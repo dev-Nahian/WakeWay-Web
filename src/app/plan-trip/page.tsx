@@ -8,7 +8,7 @@ import { PlacesAutocomplete, LocationDetail } from '@/features/trips/components/
 import { RadiusSelector } from '@/features/trips/components/RadiusSelector';
 import { TripPreviewCard } from '@/features/trips/components/TripPreviewCard';
 import { TripConfigInterface } from '@/features/trips/components/TripConfigInterface';
-import { ArrowLeft, CheckCircle2, Navigation2, Smartphone, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Navigation2, Smartphone, SlidersHorizontal, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Code splitting / Dynamic import for map component
@@ -33,14 +33,14 @@ export default function PlanTripPage() {
   const router = useRouter();
   const [selectedLocation, setSelectedLocation] = useState<LocationDetail>(defaultLocation);
   const [radiusMeters, setRadiusMeters] = useState<number>(500); // Default 500m
-  const [step, setStep] = useState<'search' | 'configure'>('configure'); // Default configure step to showcase full config prompt specs
+  const [step, setStep] = useState<'search' | 'configure'>('search');
 
   const handleMapAdjust = (newLat: number, newLng: number) => {
     setSelectedLocation((prev) => ({
       ...prev,
       lat: newLat,
       lng: newLng,
-      name: `${prev.name} (Fine-tuned)`,
+      name: `${prev.name} (Adjusted)`,
     }));
   };
 
@@ -97,7 +97,7 @@ export default function PlanTripPage() {
               <div className="space-y-1">
                 <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Where are you going?</h1>
                 <p className="text-xs text-muted-foreground">
-                  Search your destination using Google Places Autocomplete.
+                  Search any destination worldwide using Google Places Autocomplete.
                 </p>
               </div>
 

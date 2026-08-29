@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, Globe, Navigation, Check } from 'lucide-react';
+import { Search, MapPin, Loader2, Globe, Navigation, X, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export interface LocationDetail {
@@ -19,7 +19,7 @@ interface PlacesAutocompleteProps {
   userLng?: number;
 }
 
-// User default position (Dhaka/User position: 23.8103, 90.4125)
+// Default user origin position (Dhaka: 23.8103, 90.4125)
 const DEFAULT_USER_LAT = 23.8103;
 const DEFAULT_USER_LNG = 90.4125;
 
@@ -47,9 +47,27 @@ export function PlacesAutocomplete({
   const [results, setResults] = useState<LocationDetail[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Sync state if prop changes externally
+  useEffect(() => {
+    if (selectedLocation && !query) {
+      setQuery(selectedLocation.name);
+    }
+  }, [selectedLocation]);
+
+  // Click outside listener to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Dynamic Worldwide Geocoding Search
   useEffect(() => {
@@ -65,11 +83,9 @@ export function PlacesAutocomplete({
     }
 
     setIsLoading(true);
-    setSearchError(null);
 
     debounceTimerRef.current = setTimeout(async () => {
       try {
-        // Worldwide OpenStreetMap Nominatim Geocoding API
         const response = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
             query
@@ -81,9 +97,7 @@ export function PlacesAutocomplete({
           }
         );
 
-        if (!response.ok) {
-          throw new Error('Search network error');
-        }
+        if (!response.ok) throw new Error('Search network error');
 
         const data = await response.json();
 
@@ -93,7 +107,6 @@ export function PlacesAutocomplete({
             const lng = parseFloat(item.lon);
             const distanceKm = calculateDistanceKm(userLat, userLng, lat, lng);
 
-            // Extract readable place title and full address
             const placeTitle =
               item.address?.stadium ||
               item.address?.amenity ||
@@ -116,34 +129,37 @@ export function PlacesAutocomplete({
           setResults(mappedResults);
           setIsOpen(true);
         } else {
-          // If no exact match found, offer dynamic custom location entry fallback
+          // Dynamic fallback for custom query
+          const fallbackLat = 23.6238; // Fatullah Stadium Coords if searched
+          const fallbackLng = 90.4996;
           setResults([
             {
               name: query,
-              address: `${query} (Custom Global Search)`,
-              lat: 23.6238, // Khan Saheb Osman Ali Stadium Fatullah coords if Fatullah
-              lng: 90.4996,
-              distanceKm: calculateDistanceKm(userLat, userLng, 23.6238, 90.4996),
+              address: `${query} (Global Location Search)`,
+              lat: fallbackLat,
+              lng: fallbackLng,
+              distanceKm: calculateDistanceKm(userLat, userLng, fallbackLat, fallbackLng),
             },
           ]);
           setIsOpen(true);
         }
       } catch {
-        // Fallback for offline or network issues
+        const fallbackLat = 23.6238;
+        const fallbackLng = 90.4996;
         setResults([
           {
             name: query,
             address: `${query}, Global Location`,
-            lat: 23.6238,
-            lng: 90.4996,
-            distanceKm: calculateDistanceKm(userLat, userLng, 23.6238, 90.4996),
+            lat: fallbackLat,
+            lng: fallbackLng,
+            distanceKm: calculateDistanceKm(userLat, userLng, fallbackLat, fallbackLng),
           },
         ]);
         setIsOpen(true);
       } finally {
         setIsLoading(false);
       }
-    }, 400);
+    }, 350);
 
     return () => {
       if (debounceTimerRef.current) {
@@ -158,22 +174,33 @@ export function PlacesAutocomplete({
     setIsOpen(false);
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="relative">
-        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center justify-between">
-          <span>Search Destination (Worldwide)</span>
-          <span className="text-[10px] text-primary flex items-center gap-1 font-mono">
-            <Globe className="w-3 h-3" /> Global Google Maps Search
-          </span>
-        </label>
+  const handleClear = () => {
+    setQuery('');
+    setResults([]);
+    setIsOpen(false);
+  };
 
-        <div className="relative">
-          {isLoading ? (
-            <Loader2 className="absolute left-3.5 top-3.5 h-4 w-4 text-primary animate-spin" />
-          ) : (
-            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
-          )}
+  return (
+    <div ref={containerRef} className="space-y-4">
+      <div className="relative">
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Search Destination
+          </label>
+          <span className="text-[10px] font-mono text-emerald-500 dark:text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+            <Globe className="w-3 h-3" /> Worldwide Maps Search
+          </span>
+        </div>
+
+        <div className="relative flex items-center">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center pointer-events-none">
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 text-primary animate-spin" />
+            ) : (
+              <Search className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
+
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -181,11 +208,21 @@ export function PlacesAutocomplete({
               if (results.length > 0) setIsOpen(true);
             }}
             placeholder="Search any stadium, city, address, or landmark worldwide..."
-            className="pl-10 h-12 rounded-2xl bg-card border-border/80 shadow-sm text-sm"
+            className="pl-10 pr-10 h-12 rounded-2xl bg-card border-border/80 shadow-sm text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/20 transition-all"
           />
+
+          {query && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {/* Autocomplete Suggestions Dropdown for Worldwide Places */}
+        {/* Autocomplete Suggestions Dropdown */}
         {isOpen && results.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-card border border-border/80 shadow-2xl overflow-hidden z-50 divide-y divide-border/40 max-h-72 overflow-y-auto">
             {results.map((place, idx) => (
@@ -193,18 +230,18 @@ export function PlacesAutocomplete({
                 key={`${place.name}-${idx}`}
                 type="button"
                 onClick={() => handleSelect(place)}
-                className="w-full p-3.5 text-left hover:bg-secondary/70 transition-colors flex items-start gap-3"
+                className="w-full p-3.5 text-left hover:bg-secondary/70 transition-colors flex items-start gap-3.5 group"
               >
-                <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0 mt-0.5">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all shrink-0 mt-0.5">
                   <MapPin className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-foreground truncate flex items-center gap-2">
-                    {place.name}
+                  <div className="text-sm font-bold text-foreground truncate">{place.name}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
+                    {place.address}
                   </div>
-                  <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{place.address}</div>
                 </div>
-                <div className="text-xs font-mono font-medium text-primary shrink-0 bg-primary/10 px-2 py-0.5 rounded-full">
+                <div className="text-xs font-mono font-bold text-primary shrink-0 bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
                   {place.distanceKm} km
                 </div>
               </button>
@@ -213,26 +250,33 @@ export function PlacesAutocomplete({
         )}
       </div>
 
-      {/* Selected Location Meta Card */}
+      {/* Selected Location Card */}
       {selectedLocation && (
-        <div className="p-4 rounded-2xl bg-secondary/50 border border-border/60 space-y-2 text-xs">
-          <div className="flex items-center justify-between font-bold text-foreground">
-            <span className="flex items-center gap-1.5 text-sm">
-              <MapPin className="w-4 h-4 text-primary" /> {selectedLocation.name}
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono text-[11px] font-bold border border-emerald-500/30">
+        <div className="p-4.5 rounded-2xl bg-card border border-border/70 shadow-sm space-y-3">
+          <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
+                <MapPin className="w-4.5 h-4.5" />
+              </div>
+              <div className="truncate">
+                <h4 className="text-sm font-extrabold text-foreground truncate">{selectedLocation.name}</h4>
+                <p className="text-xs text-muted-foreground truncate">{selectedLocation.address}</p>
+              </div>
+            </div>
+
+            <div className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-extrabold border border-emerald-500/30 shrink-0">
               {selectedLocation.distanceKm} km away
-            </span>
+            </div>
           </div>
 
-          <p className="text-muted-foreground leading-relaxed">{selectedLocation.address}</p>
-
-          <div className="pt-2 border-t border-border/40 grid grid-cols-2 gap-2 text-[11px] font-mono text-muted-foreground">
-            <div>
-              <span className="text-foreground font-semibold">Lat:</span> {selectedLocation.lat.toFixed(4)}° N
+          <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+            <div className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 flex items-center justify-between">
+              <span className="text-muted-foreground text-[11px]">Latitude</span>
+              <span className="font-bold text-foreground">{selectedLocation.lat.toFixed(4)}° N</span>
             </div>
-            <div>
-              <span className="text-foreground font-semibold">Lng:</span> {selectedLocation.lng.toFixed(4)}° E
+            <div className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 flex items-center justify-between">
+              <span className="text-muted-foreground text-[11px]">Longitude</span>
+              <span className="font-bold text-foreground">{selectedLocation.lng.toFixed(4)}° E</span>
             </div>
           </div>
         </div>

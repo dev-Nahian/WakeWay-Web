@@ -5,11 +5,21 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import { useTripSync } from '@/hooks/useTripSync';
-import { TripMap } from '@/features/trips/components/TripMap';
 import { LocationDetail } from '@/features/trips/components/PlacesAutocomplete';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+
+// Code splitting / Dynamic import for interactive map
+const TripMap = dynamic(() => import('@/features/trips/components/TripMap').then((mod) => mod.TripMap), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[520px] rounded-3xl bg-secondary/30 border border-border/60 animate-pulse flex items-center justify-center text-xs text-muted-foreground">
+      Loading live map view...
+    </div>
+  ),
+});
 import {
   MapPin,
   Navigation,

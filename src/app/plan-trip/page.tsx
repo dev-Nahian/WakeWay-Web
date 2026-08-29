@@ -3,13 +3,23 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { PlacesAutocomplete, LocationDetail } from '@/features/trips/components/PlacesAutocomplete';
 import { RadiusSelector } from '@/features/trips/components/RadiusSelector';
-import { TripMap } from '@/features/trips/components/TripMap';
 import { TripPreviewCard } from '@/features/trips/components/TripPreviewCard';
 import { TripConfigInterface } from '@/features/trips/components/TripConfigInterface';
 import { ArrowLeft, CheckCircle2, Navigation2, Smartphone, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+// Code splitting / Dynamic import for map component
+const TripMap = dynamic(() => import('@/features/trips/components/TripMap').then((mod) => mod.TripMap), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[520px] rounded-3xl bg-secondary/30 border border-border/60 animate-pulse flex items-center justify-center text-xs text-muted-foreground">
+      Loading interactive map visualization...
+    </div>
+  ),
+});
 
 const defaultLocation: LocationDetail = {
   name: 'Chattogram Railway Station',

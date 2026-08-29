@@ -111,9 +111,11 @@ export default function DashboardPage() {
                 </p>
 
                 <div className="pt-2 flex flex-col sm:flex-row items-center gap-4">
-                  <Button size="lg" className="w-full sm:w-auto rounded-full px-8 py-6 text-base font-semibold shadow-lg">
-                    <PlusCircle className="mr-2 h-5 w-5" />
-                    Plan a Trip
+                  <Button size="lg" asChild className="w-full sm:w-auto rounded-full px-8 py-6 text-base font-semibold shadow-lg">
+                    <Link href="/plan-trip">
+                      <PlusCircle className="mr-2 h-5 w-5" />
+                      Plan a Trip
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -181,15 +183,18 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Button
             variant="outline"
+            asChild
             className="h-20 rounded-2xl border-border/60 bg-card hover:bg-secondary/60 justify-start px-6 gap-4 shadow-sm"
           >
-            <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center">
-              <PlusCircle className="w-5 h-5" />
-            </div>
-            <div className="text-left">
-              <div className="font-bold text-foreground">Plan a Trip</div>
-              <div className="text-xs text-muted-foreground">Set new destination</div>
-            </div>
+            <Link href="/plan-trip">
+              <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center">
+                <PlusCircle className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <div className="font-bold text-foreground">Plan a Trip</div>
+                <div className="text-xs text-muted-foreground">Set new destination</div>
+              </div>
+            </Link>
           </Button>
 
           <Button

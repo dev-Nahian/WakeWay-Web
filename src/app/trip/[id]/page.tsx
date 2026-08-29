@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTripSync } from '@/hooks/useTripSync';
 import { TripMap } from '@/features/trips/components/TripMap';
 import { LocationDetail } from '@/features/trips/components/PlacesAutocomplete';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   MapPin,
   Navigation,
@@ -20,32 +22,41 @@ import {
   XCircle,
   ArrowLeft,
   Info,
-  ShieldCheck,
-  Bell,
+  Download,
+  Share2,
+  QrCode,
   Sparkles,
-  Sliders,
+  RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
-
-type MobileConnectionState = 'Connected' | 'Monitoring' | 'Disconnected' | 'Completed';
-
-const sampleTripLocation: LocationDetail = {
-  name: 'Chattogram Railway Station',
-  address: 'Station Road, Agrabad, Chattogram, Bangladesh',
-  lat: 22.3354,
-  lng: 91.8315,
-  distanceKm: 2.4,
-};
 
 export default function ActiveJourneyPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
 
-  // Mobile Connection State Management
-  const [connectionState, setConnectionState] = useState<MobileConnectionState>('Monitoring');
+  // Use Real-Time Sync Hook
+  const { trip, deviceStatus, isLoading, isWebSocketConnected, setTripStatus } = useTripSync(
+    resolvedParams.id
+  );
+
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(true);
+
+  // Deep Link Architecture URLs
+  const customSchemeUrl = `wakeway://trip/${resolvedParams.id}`;
+  const universalLinkUrl = `https://wakeway.app/trip/${resolvedParams.id}`;
+
+  const sampleTripLocation: LocationDetail = {
+    name: trip?.destinationName || 'Chattogram Railway Station',
+    address: trip?.destinationAddress || 'Station Road, Agrabad, Chattogram, Bangladesh',
+    lat: trip?.lat || 22.3354,
+    lng: trip?.lng || 91.8315,
+    distanceKm: trip?.distanceRemainingKm ?? 2.4,
+  };
 
   const handleCancelJourney = () => {
+    setTripStatus('cancelled');
     router.push('/dashboard');
   };
 
@@ -62,73 +73,86 @@ export default function ActiveJourneyPage({ params }: { params: Promise<{ id: st
             </Button>
             <div>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span
+                  className={`w-2.5 h-2.5 rounded-full ${
+                    trip?.status === 'completed'
+                      ? 'bg-blue-500'
+                      : trip?.status === 'monitoring'
+                      ? 'bg-emerald-500 animate-ping'
+                      : 'bg-amber-500'
+                  }`}
+                />
                 <h1 className="text-base font-extrabold text-foreground">Active Journey</h1>
               </div>
-              <p className="text-[11px] text-muted-foreground hidden sm:block">
-                Trip ID: {resolvedParams.id}
+              <p className="text-[11px] text-muted-foreground font-mono hidden sm:block">
+                ID: {resolvedParams.id}
               </p>
             </div>
           </div>
 
-          {/* Connection Status Badge */}
-          <div
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors ${
-              connectionState === 'Monitoring' || connectionState === 'Connected'
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                : connectionState === 'Completed'
-                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-            }`}
-          >
-            <Radio className="w-3.5 h-3.5 animate-pulse" />
-            <span>Mobile Status: {connectionState}</span>
+          {/* Real-time Connection & Mobile Status */}
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+              <RefreshCw className="w-3.5 h-3.5 text-primary animate-spin" />
+              <span>Real-time Sync Active</span>
+            </div>
+
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+              <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-500" />
+              <span>Mobile: {deviceStatus}</span>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-        {/* State Simulator Switcher for Demo Testing */}
-        <div className="flex flex-col sm:flex-row items-center justify-between p-3.5 rounded-2xl bg-card border border-border/60 shadow-sm text-xs gap-3">
-          <div className="flex items-center gap-2 font-medium text-muted-foreground">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>Interactive Connection Simulator:</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {(['Connected', 'Monitoring', 'Disconnected', 'Completed'] as const).map((st) => (
-              <Button
-                key={st}
-                variant={connectionState === st ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setConnectionState(st)}
-                className="rounded-xl text-[11px] h-7 px-3 font-semibold"
-              >
-                {st}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* DISCONNECTED WARNING BANNER */}
-        {connectionState === 'Disconnected' && (
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* WEB FALLBACK BANNER: GET WAKEWAY MOBILE */}
+        {showAppDownloadBanner && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-start gap-3 text-xs font-medium"
+            className="p-5 rounded-3xl bg-gradient-to-r from-card via-card to-secondary/50 border border-primary/30 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden"
           >
-            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-sm">Mobile App Disconnected</p>
-              <p className="mt-0.5 text-muted-foreground">
-                Your mobile device is not currently connected. Open WakeWay on your phone to ensure reliable destination alerts.
-              </p>
+            <div className="flex items-center gap-4 z-10">
+              <div className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md">
+                <Smartphone className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-foreground flex items-center gap-2">
+                  Get WakeWay Mobile
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    iOS & Android
+                  </span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  You are viewing web fallback visualization. Open link in app for background GPS alerts.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 z-10 self-end md:self-auto">
+              <Button
+                onClick={() => (window.location.href = customSchemeUrl)}
+                size="sm"
+                className="rounded-2xl text-xs font-bold gap-1.5"
+              >
+                Open in App <ExternalLink className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAppDownloadBanner(false)}
+                className="rounded-full text-xs text-muted-foreground"
+              >
+                Dismiss
+              </Button>
             </div>
           </motion.div>
         )}
 
-        {/* Main Grid: Left Status Metrics + Right Map */}
+        {/* Main Grid: Left Status Metrics + Right Live Map */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Metrics, Status Indicator & Actions */}
+          {/* Left Column */}
           <div className="lg:col-span-5 space-y-6">
             {/* Active Journey Metrics Card */}
             <Card className="rounded-3xl border-border/60 bg-card shadow-sm p-6 space-y-6">
@@ -137,12 +161,16 @@ export default function ActiveJourneyPage({ params }: { params: Promise<{ id: st
                   <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                     Current Status
                   </div>
-                  <div className="text-xl font-extrabold text-foreground mt-0.5">
-                    Journey in progress
+                  <div className="text-xl font-extrabold text-foreground mt-0.5 capitalize">
+                    {trip?.status === 'completed'
+                      ? 'Destination Reached 🎉'
+                      : trip?.status === 'cancelled'
+                      ? 'Journey Cancelled'
+                      : 'Journey in progress'}
                   </div>
                 </div>
-                <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-mono font-bold">
-                  Active
+                <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-mono font-bold uppercase">
+                  {trip?.status || 'monitoring'}
                 </div>
               </div>
 
@@ -152,9 +180,11 @@ export default function ActiveJourneyPage({ params }: { params: Promise<{ id: st
                 </div>
                 <div className="text-3xl font-extrabold text-foreground tracking-tight mt-1 flex items-center gap-2">
                   <MapPin className="w-7 h-7 text-emerald-500 shrink-0" />
-                  Chattogram
+                  {trip?.destinationName || 'Chattogram'}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Station Road, Agrabad, Chattogram</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {trip?.destinationAddress || 'Station Road, Agrabad, Chattogram'}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
@@ -162,14 +192,18 @@ export default function ActiveJourneyPage({ params }: { params: Promise<{ id: st
                   <div className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
                     <Navigation className="w-3.5 h-3.5 text-primary" /> Distance Remaining
                   </div>
-                  <div className="text-2xl font-black text-foreground font-mono">2.4 km</div>
+                  <div className="text-2xl font-black text-foreground font-mono">
+                    {trip?.distanceRemainingKm ?? 2.4} km
+                  </div>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40 space-y-1">
                   <div className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-primary" /> Est. Arrival
                   </div>
-                  <div className="text-2xl font-black text-foreground">8 mins</div>
+                  <div className="text-2xl font-black text-foreground">
+                    {trip?.etaMinutes ?? 8} mins
+                  </div>
                 </div>
               </div>
             </Card>
@@ -183,22 +217,32 @@ export default function ActiveJourneyPage({ params }: { params: Promise<{ id: st
                 <div>
                   <h2 className="text-xl font-extrabold text-foreground">Sleep Mode Active</h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Your WakeWay mobile app is monitoring your journey.
+                    Your WakeWay mobile app is monitoring your journey in real time.
                   </p>
                 </div>
               </div>
             </Card>
 
-            {/* ARCHITECTURE CLARITY BOX */}
-            <div className="p-4 rounded-2xl bg-secondary/40 border border-border/60 text-xs space-y-2">
-              <div className="font-bold text-foreground flex items-center gap-1.5">
-                <Info className="w-4 h-4 text-primary" /> How Monitoring Works
+            {/* MOBILE HANDOFF QR CODE CARD */}
+            <Card className="rounded-3xl border-border/60 bg-card p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <QrCode className="w-4 h-4 text-primary" /> Mobile App Universal Deep Link
+                </span>
+                <span className="text-[10px] font-mono text-muted-foreground">`wakeway://`</span>
               </div>
-              <ul className="space-y-1 text-[11px] text-muted-foreground list-disc list-inside">
-                <li><span className="font-semibold text-foreground">Web Dashboard:</span> Real-time route visualization & status dashboard.</li>
-                <li><span className="font-semibold text-foreground">Mobile App:</span> Background GPS tracking & hardware alarm triggers.</li>
-              </ul>
-            </div>
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-xl bg-white border border-zinc-200 shrink-0">
+                  <QRCodeSVG value={customSchemeUrl} size={90} level="M" />
+                </div>
+                <div className="space-y-1 text-xs">
+                  <p className="font-bold text-foreground">Open on Mobile</p>
+                  <p className="text-muted-foreground text-[11px] leading-relaxed">
+                    Scan code with your phone camera to transition live tracking to native iOS or Android app.
+                  </p>
+                </div>
+              </div>
+            </Card>
 
             {/* ACTION BUTTONS */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -224,9 +268,9 @@ export default function ActiveJourneyPage({ params }: { params: Promise<{ id: st
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                 <span className="font-bold uppercase tracking-wider">Live Route Map</span>
-                <span className="font-mono">Alert Radius: 500m</span>
+                <span className="font-mono">Alert Radius: {trip?.radiusMeters || 500}m</span>
               </div>
-              <TripMap destination={sampleTripLocation} radiusMeters={500} />
+              <TripMap destination={sampleTripLocation} radiusMeters={trip?.radiusMeters || 500} />
             </div>
           </div>
         </div>
@@ -243,30 +287,28 @@ export default function ActiveJourneyPage({ params }: { params: Promise<{ id: st
               className="w-full max-w-md rounded-3xl border border-border/80 bg-card p-6 shadow-2xl space-y-5"
             >
               <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                <h3 className="font-bold text-base text-foreground">Trip Configuration Details</h3>
+                <h3 className="font-bold text-base text-foreground">Trip Details & Sync Payload</h3>
                 <Button variant="ghost" size="sm" onClick={() => setShowDetailsModal(false)}>✕</Button>
               </div>
 
               <div className="space-y-3 text-xs">
                 <div className="p-3 rounded-xl bg-secondary/50 flex justify-between">
                   <span className="text-muted-foreground">Destination</span>
-                  <span className="font-bold text-foreground">Chattogram</span>
+                  <span className="font-bold text-foreground">{trip?.destinationName}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-secondary/50 flex justify-between">
-                  <span className="text-muted-foreground">Wake-up Radius</span>
-                  <span className="font-bold text-foreground">500 meters</span>
+                  <span className="text-muted-foreground">Wake Radius</span>
+                  <span className="font-bold text-foreground">{trip?.radiusMeters || 500} meters</span>
                 </div>
                 <div className="p-3 rounded-xl bg-secondary/50 flex justify-between">
-                  <span className="text-muted-foreground">Alert Channels</span>
-                  <span className="font-bold text-foreground">Sound + Vibration + Push</span>
+                  <span className="text-muted-foreground">Universal Link</span>
+                  <span className="font-mono text-[10px] text-primary truncate max-w-[200px]">
+                    {universalLinkUrl}
+                  </span>
                 </div>
                 <div className="p-3 rounded-xl bg-secondary/50 flex justify-between">
-                  <span className="text-muted-foreground">Early Warning</span>
-                  <span className="font-bold text-foreground">1 km Pre-alert</span>
-                </div>
-                <div className="p-3 rounded-xl bg-secondary/50 flex justify-between">
-                  <span className="text-muted-foreground">Paired App</span>
-                  <span className="font-bold text-emerald-500">WakeWay React Native</span>
+                  <span className="text-muted-foreground">Mobile Device</span>
+                  <span className="font-bold text-emerald-500">Android / iOS Paired</span>
                 </div>
               </div>
 
@@ -294,15 +336,15 @@ export default function ActiveJourneyPage({ params }: { params: Promise<{ id: st
               <div className="space-y-1">
                 <h3 className="font-bold text-base text-foreground">Cancel Active Journey?</h3>
                 <p className="text-xs text-muted-foreground">
-                  This will stop location monitoring on your mobile app and return to the dashboard.
+                  This will update status to cancelled and stop tracking on your mobile app.
                 </p>
               </div>
 
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" className="flex-1 rounded-2xl" onClick={() => setShowCancelModal(false)}>
+                <Button variant="outline" className="flex-1 rounded-2xl text-xs" onClick={() => setShowCancelModal(false)}>
                   Keep Active
                 </Button>
-                <Button variant="destructive" className="flex-1 rounded-2xl" onClick={handleCancelJourney}>
+                <Button variant="destructive" className="flex-1 rounded-2xl text-xs font-bold" onClick={handleCancelJourney}>
                   Yes, Cancel
                 </Button>
               </div>

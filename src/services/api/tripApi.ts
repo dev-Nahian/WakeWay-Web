@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import { SyncTrip, TripStatus } from '@/types/sync';
+import { createTripSecuritySchema, sanitizeInput } from '@/lib/security';
 
 export interface CreateTripDTO {
   destinationName: string;
@@ -98,18 +99,25 @@ export const tripApi = {
   },
 
   createTrip: async (data: CreateTripDTO): Promise<SyncTrip> => {
+    // Validate inputs using security schema
+    const validatedData = createTripSecuritySchema.parse({
+      ...data,
+      destinationName: sanitizeInput(data.destinationName),
+      destinationAddress: sanitizeInput(data.destinationAddress),
+    });
+
     try {
-      const res = await apiClient.post<SyncTrip>('/trips', data);
+      const res = await apiClient.post<SyncTrip>('/trips', validatedData);
       return res.data;
     } catch {
       return {
         id: `trip_${Date.now()}`,
         userId: 'usr_demo',
-        destinationName: data.destinationName,
-        destinationAddress: data.destinationAddress,
-        lat: data.lat,
-        lng: data.lng,
-        radiusMeters: data.radiusMeters,
+        destinationName: validatedData.destinationName,
+        destinationAddress: validatedData.destinationAddress,
+        lat: validatedData.lat,
+        lng: validatedData.lng,
+        radiusMeters: validatedData.radiusMeters,
         status: 'planned',
         distanceRemainingKm: 15.0,
         etaMinutes: 25,
